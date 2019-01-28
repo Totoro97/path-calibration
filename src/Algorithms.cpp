@@ -101,13 +101,14 @@ void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
     std::vector<int> pas;
     que.emplace_back(x_begin, y_begin);
     pas.push_back(-1);
+    vis[x_begin * width + y_begin] = tick_counter;
     bool found = false;
 
     for (int idx = 0; !found && idx < que.size(); idx++) {
       int x = que[idx].first, y = que[idx].second;
       for (int bias_x = -1; bias_x <= 1 && !found; bias_x++) {
         for (int bias_y = -1; bias_y <= 1 && !found; bias_y++) {
-          if ((!bias_x && !bias_y) || IsNeighbor(x, y, bias_x, bias_y)) {
+          if ((!bias_x && !bias_y) || !IsNeighbor(x, y, bias_x, bias_y)) {
             continue;
           }
           int a = x + bias_x, b = y + bias_y;
@@ -120,6 +121,9 @@ void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
           if (odd_points.find(std::make_pair(a, b)) != odd_points.end()) {
             odd_points.erase(std::make_pair(a, b));
             found = true;
+            // std::cout << "For Debug" << std::endl;
+            // std::cout << "---------------------------" << std::endl;
+            // std::cout << a << " " << b << std::endl;
             for (int i = int(que.size()) - 1; i > 0; i = pas[i]) {
               int bias_a = que[pas[i]].first - a;
               int bias_b = que[pas[i]].second - b;
@@ -127,6 +131,7 @@ void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
               res[((a + bias_a) * width + b + bias_b) * 9 + (-bias_a + 1) * 3 - bias_b + 1]++;
               a += bias_a;
               b += bias_b;
+              std::cout << a << " " << b << std::endl;
             }
           }
         }
@@ -152,6 +157,7 @@ void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
         res[(x * width + y) * 9 + (bias_x + 1) * 3 + bias_y + 1]--;
         res[((x + bias_x) * width + y + bias_y) * 9 + (-bias_x + 1) * 3 - bias_y + 1]--;
         FindEulerPath(x + bias_x, y + bias_y);
+        path_2d.emplace_back(x, y);
       }
     }
     path_2d.emplace_back(x, y);

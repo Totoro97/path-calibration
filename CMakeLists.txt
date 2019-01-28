@@ -11,6 +11,7 @@ include_directories(/usr/include/eigen3/Eigen)
 set(CMAKE_CXX_STANDARD 14)
 
 set(SOURCE_FILES src/Algorithms.cpp src/Algorithms.h)
+set(SOURCE_FILES ${SOURCE_FILES} src/Thinning.h)
 
 add_executable(PathCalibration ${SOURCE_FILES} src/main.cpp)
 

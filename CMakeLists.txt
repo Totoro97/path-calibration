@@ -10,6 +10,8 @@ include_directories(/usr/include/eigen3/Eigen)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(PathCalibration main.cpp)
+set(SOURCE_FILES src/Algorithms.cpp src/Algorithms.h)
+
+add_executable(PathCalibration ${SOURCE_FILES} src/main.cpp)
 
 target_link_libraries(PathCalibration ${OpenCV_LIBS})

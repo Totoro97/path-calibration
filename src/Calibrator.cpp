@@ -23,7 +23,7 @@ void Calibrator::Run() {
       sampled_.push_back(i);
       num_ex_paras_++;
     }
-    else if (i % 20 == 0) {
+    else if (i % 40 == 0) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
       num_ex_paras_++;
@@ -74,7 +74,7 @@ void Calibrator::Run() {
         p_idx++;
         // fix first depth
         if (p_idx == 0) {
-        A(idx, p_idx) = 0.0;
+          A(idx, p_idx) = 0.0;
           continue;
         }
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
@@ -189,8 +189,8 @@ double Calibrator::GetDepth(int idx) {
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
-  double x = (j - dist_map_->width_  / 2.0) * depth / cam_paras_[6];
-  double y = (i - dist_map_->height_ / 2.0) * depth / cam_paras_[6];
+  double x = (j - dist_map_->width_  / 2.0) * depth;
+  double y = (i - dist_map_->height_ / 2.0) * depth;
   double z = depth;
   // 0, 1, 2: translation.
   double t_x = x + cam_paras_[0];
@@ -209,7 +209,7 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
 
   // std::cout << "z = " << r_coord(2) << std::endl;
   return Eigen::Vector2d(
-    r_coord(1) / r_coord(2) * cam_paras_[6] + (double) dist_map_->height_ / 2,
-    r_coord(0) / r_coord(2) * cam_paras_[6] + (double) dist_map_->width_ / 2
+    r_coord(1) / r_coord(2) + (double) dist_map_->height_ / 2,
+    r_coord(0) / r_coord(2) + (double) dist_map_->width_ / 2
     );
 }

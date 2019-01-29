@@ -39,18 +39,6 @@ void Calibrator::Run() {
     }
   }
 
-  auto GetDepth = [this](int idx) {
-    if (next_sampled_[idx] == idx) {
-      return depth_[idx];
-    }
-    else {
-      int a = past_sampled_[idx];
-      int b = next_sampled_[idx];
-      double bias = ((double) (idx - a)) / ((double) (b - a));
-      return depth_[a] * (1.0 - bias) + depth_[b] * bias;
-    }
-  };
-
   bool iter_ok = false;
   while (!iter_ok) {
     Eigen::MatrixXd A(num_valid_funcs, 6 + num_ex_paras_);
@@ -104,5 +92,54 @@ void Calibrator::Run() {
     for (int t = 0; t < 6; t++) {
       cam_paras_[t] += delta_p(++p_idx);
     }
+    ShowCurrentSituation();
   }
+}
+
+void Calibrator::ShowCurrentSituation() {
+  int idx = -1;
+  double current_error = 0.0;
+  for (int i = 0; i < path_2d_.size(); i++) {
+    if (path_2d_[i](0) == -1) {
+      continue;
+    }
+    idx++;
+    auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
+    current_error += dist_map_->Distance(warped(0), warped(1));
+  }
+  current_error /= (double) idx;
+  std::cout << "current_error: " << current_error << std::endl;
+  // TODO: Draw image.
+}
+
+double Calibrator::GetDepth(int idx) {
+  if (next_sampled_[idx] == idx) {
+    return depth_[idx];
+  }
+  else {
+    int a = past_sampled_[idx];
+    int b = next_sampled_[idx];
+    double bias = ((double) (idx - a)) / ((double) (b - a));
+    return depth_[a] * (1.0 - bias) + depth_[b] * bias;
+  }
+}
+
+Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
+  double x = (j - dist_map_->width_  / 2.0) * depth;
+  double y = (i - dist_map_->height_ / 2.0) * depth;
+  double z = depth;
+  // 0, 1, 2: translation.
+  double t_x = x + cam_paras_[0];
+  double t_y = y + cam_paras_[1];
+  double t_z = z + cam_paras_[2];
+  // 3, 4, 5: rotation.
+  Eigen::Vector3d w(cam_paras_[3], cam_paras_[4], cam_paras_[5]);
+  Eigen::Matrix3d t;
+  t = Eigen::AngleAxisd(w.norm(), w);
+  auto r_coord = t * Eigen::Vector3d(t_x, t_y, t_z);
+
+  return Eigen::Vector2d(
+    r_coord(1) / r_coord(2) + (double) dist_map_->height_ / 2,
+    r_coord(0) / r_coord(2) + (double) dist_map_->width_ / 2
+    );
 }

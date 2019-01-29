@@ -25,4 +25,5 @@ public:
   std::vector<double> depth_;
 
   DistMap *dist_map_ = nullptr;
+  double cam_paras_[6] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 };

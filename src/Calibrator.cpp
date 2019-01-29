@@ -10,6 +10,7 @@ void Calibrator::Run() {
   int num_ex_paras_ = 0;
   past_sampled_.resize(path_2d_.size(), -1);
   next_sampled_.resize(path_2d_.size(), -1);
+  // TODO: Hard code here.
   depth_.resize(path_2d_.size(), 1000.0);
 
   for (int i = 0; i < path_2d_.size(); i++) {
@@ -39,8 +40,7 @@ void Calibrator::Run() {
 
   // ShowSampledPoints();
   ShowCurrentSituation();
-  bool iter_ok = false;
-  while (!iter_ok) {
+  while (true) {
     Eigen::MatrixXd A(num_valid_funcs, 6 + num_ex_paras_);
     Eigen::VectorXd B(num_valid_funcs);
     int idx = -1;
@@ -86,14 +86,24 @@ void Calibrator::Run() {
     Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(B);
     std::cout << delta_p << std::endl;
     //exit(0);
-    int p_idx = -1;
-    for (int p : sampled_) {
-      depth_[p] += delta_p(++p_idx);
-    }
-    for (int t = 0; t < 6; t++) {
-      cam_paras_[t] += delta_p(++p_idx);
-    }
+    double current_error = CalcCurrentError();
+    AddDeltaP(delta_p);
+    double new_error = CalcCurrentError();
     ShowCurrentSituation();
+    if (new_error > current_error) {
+      AddDeltaP(-delta_p);
+      break;
+    };
+  }
+}
+
+void Calibrator::AddDeltaP(const Eigen::VectorXd &delta_p) {
+  int p_idx = -1;
+  for (int p : sampled_) {
+    depth_[p] += delta_p(++p_idx);
+  }
+  for (int t = 0; t < 6; t++) {
+    cam_paras_[t] += delta_p(++p_idx);
   }
 }
 
@@ -108,10 +118,25 @@ void Calibrator::ShowSampledPoints() {
   cv::waitKey(-1);
 }
 
+double Calibrator::CalcCurrentError() {
+  int idx = -1;
+  double current_error = 0;
+  for (int i = 0; i < path_2d_.size(); i++) {
+    if (path_2d_[i](0) == -1) {
+      continue;
+    }
+    idx++;
+    auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
+    current_error += dist_map_->Distance(warped(0), warped(1));
+  }
+  current_error /= (double) idx;
+  return current_error;
+}
+
 void Calibrator::ShowCurrentSituation() {
   int idx = -1;
-  double current_error = 0.0;
-  cv::Mat img(dist_map_->height_, dist_map_->width_, CV_8UC3, cv::Scalar(0, 0, 0));
+  cv::Mat img;
+  cv::cvtColor(img_gray_, img, cv::COLOR_GRAY2BGR);
   for (int i = 0; i < path_2d_.size(); i++) {
     if (path_2d_[i](0) == -1) {
       continue;
@@ -119,10 +144,8 @@ void Calibrator::ShowCurrentSituation() {
     idx++;
     auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
     cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(255, 0, 0), 1);
-    current_error += dist_map_->Distance(warped(0), warped(1));
   }
-  current_error /= (double) idx;
-  std::cout << "current_error: " << current_error << std::endl;
+  std::cout << "current_error: " << CalcCurrentError() << std::endl;
   cv::imshow("Current", img);
   cv::waitKey(-1);
 }

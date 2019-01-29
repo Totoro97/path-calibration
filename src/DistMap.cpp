@@ -127,3 +127,13 @@ double DistMap::Distance(double a, double b) {
     return dist_map_[a_i * width_ + b_i] + std::abs(a_i - a) + std::abs(b_i - b);
   }
 }
+
+void DistMap::ShowDistMap() {
+  cv::Mat img(height_, width_, CV_8UC1);
+  for (int i = 0; i < height_ * width_; i++) {
+    img.data[i] = (uchar) std::min(255.0, dist_map_[i]);
+  }
+  cv::imshow("dist map", img);
+  cv::waitKey(-1);
+  cv::destroyAllWindows();
+}

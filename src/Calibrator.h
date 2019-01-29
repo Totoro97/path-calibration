@@ -12,6 +12,7 @@ class Calibrator {
 public:
   Calibrator(const std::vector<Eigen::Vector2i> &path_2d, const cv::Mat &img_gray): path_2d_(path_2d) {
     dist_map_ = new DistMap(img_gray, true);
+    // dist_map_->ShowDistMap();
   }
   ~Calibrator() {
     delete(dist_map_);

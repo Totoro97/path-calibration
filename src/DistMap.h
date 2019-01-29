@@ -9,6 +9,7 @@ public:
   ~DistMap();
   void CalcDistMap(const cv::Mat &img, std::string map_path);
   void LoadDistMap(std::string map_path);
+  void ShowDistMap();
   double Distance(double a, double b);
   bool IsInside(const cv::Mat &img, int i, int j);
 

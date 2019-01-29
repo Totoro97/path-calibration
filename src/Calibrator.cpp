@@ -6,13 +6,11 @@
 
 void Calibrator::Run() {
   // Initialize Parameters.
-  double r_a = 0.0, r_b = 0.0, r_c = 0.0;
-  double t_x = 0.0, t_y = 0.0, t_z = 0.0;
 
   int num_ex_paras_ = 0;
   past_sampled_.resize(path_2d_.size(), -1);
   next_sampled_.resize(path_2d_.size(), -1);
-  depth_.resize(path_2d_.size(), 1.0);
+  depth_.resize(path_2d_.size(), 1000.0);
 
   for (int i = 0; i < path_2d_.size(); i++) {
     if (i == 0 || i == path_2d_.size() - 1 || path_2d_[i - 1](0) == -1 || path_2d_[i + 1](0) == -1) {
@@ -59,9 +57,8 @@ void Calibrator::Run() {
         (dist_map_->Distance(warped(0) + step_len, warped(1)) - B(idx)) / step_len;
       grad_i(1) =
         (dist_map_->Distance(warped(0), warped(1) + step_len) - B(idx)) / step_len;
-      int p_idx = -1;
-
       // Depth Paras.
+      int p_idx = -1;
       for (int p : sampled_) {
         p_idx++;
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
@@ -87,6 +84,8 @@ void Calibrator::Run() {
 
     // Solve least square.
     Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(B);
+    std::cout << delta_p << std::endl;
+    //exit(0);
     int p_idx = -1;
     for (int p : sampled_) {
       depth_[p] += delta_p(++p_idx);
@@ -151,9 +150,15 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
   // 3, 4, 5: rotation.
   Eigen::Vector3d w(cam_paras_[3], cam_paras_[4], cam_paras_[5]);
   Eigen::Matrix3d t;
-  t = Eigen::AngleAxisd(w.norm(), w);
+  if (w.norm() < 1e-4) {
+    t.setIdentity();
+  }
+  else {
+    t = Eigen::AngleAxisd(w.norm(), w / w.norm());
+  }
   auto r_coord = t * Eigen::Vector3d(t_x, t_y, t_z);
 
+  // std::cout << "z = " << r_coord(2) << std::endl;
   return Eigen::Vector2d(
     r_coord(1) / r_coord(2) + (double) dist_map_->height_ / 2,
     r_coord(0) / r_coord(2) + (double) dist_map_->width_ / 2

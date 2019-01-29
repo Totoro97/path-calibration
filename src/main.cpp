@@ -6,6 +6,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Algorithms.h"
+#include "Calibrator.h"
 #include "Thinning.h"
 
 void Run(std::string img_0_path, std::string img_1_path) {
@@ -27,19 +28,21 @@ void Run(std::string img_0_path, std::string img_1_path) {
   cv::imwrite("out.png", img_0_gray);
   Algo::GetPathPoints(img_0_gray, path_2d);
 
-  // Test path?
-  cv::Mat test_img(img_0.rows, img_0.cols, CV_8UC3);
+  // Test path.
 
-  //for (const auto &pt : path_2d) {
-  for (int i = 0; i < path_2d.size(); i++) {
-    auto pt = path_2d[i];
+  cv::Mat test_img(img_0.rows, img_0.cols, CV_8UC3);
+  for (const auto &pt : path_2d) {
+    if (pt(0) < 0) {
+      continue;
+    }
     cv::circle(test_img, cv::Point2d(pt(1), pt(0)), 1, cv::Scalar(255, 255, 255), 1);
     cv::imshow("path", test_img);
     cv::waitKey(10);
   }
 
   // Main algorithm
-  Calibrater.Run(path_2d, img_1_gray);
+  Calibrator calibrator(path_2d, img_1_gray);
+  calibrator.Run();
 }
 
 int main() {

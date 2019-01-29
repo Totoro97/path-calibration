@@ -14,12 +14,23 @@ void Calibrator::Run() {
   depth_.resize(path_2d_.size(), 1000.0);
 
   for (int i = 0; i < path_2d_.size(); i++) {
+    if (path_2d_[i](0) == -1) {
+      continue;
+    }
+
     if (i == 0 || i == path_2d_.size() - 1 || path_2d_[i - 1](0) == -1 || path_2d_[i + 1](0) == -1) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
       num_ex_paras_++;
     }
+    /*else if (i % 20 == 0) {
+      past_sampled_[i] = next_sampled_[i] = i;
+      sampled_.push_back(i);
+      num_ex_paras_++;
+    }*/
   }
+  std::cout << "num_ex_paras = " << num_ex_paras_ << std::endl;
+
   for (int i = 0; i < path_2d_.size(); i++) {
     if (path_2d_[i](0) != -1 && past_sampled_[i] == -1) {
       past_sampled_[i] = past_sampled_[i - 1];
@@ -61,6 +72,8 @@ void Calibrator::Run() {
       int p_idx = -1;
       for (int p : sampled_) {
         p_idx++;
+        // A(idx, p_idx) = 0.0;
+        // continue;
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
           A(idx, p_idx) = 0.0;
           continue;
@@ -83,17 +96,27 @@ void Calibrator::Run() {
     }
 
     // Solve least square.
-    Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(B);
+    // Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(-B);
+    // ---------------------
+    Eigen::VectorXd delta_p = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(-B);
+    // ---------------------
+    // Or: Grad?
+    // Eigen::VectorXd delta_p = Eigen::VectorXd::Zero(6 + num_ex_paras_);
+    // for (int i = 0; i < num_valid_funcs; i++) {
+    //  delta_p += A.block(i, 0, 1, 6 + num_ex_paras_).transpose();
+    // }
+    // delta_p *= -1e-3 / num_valid_funcs;
+
     std::cout << delta_p << std::endl;
     //exit(0);
     double current_error = CalcCurrentError();
     AddDeltaP(delta_p);
     double new_error = CalcCurrentError();
     ShowCurrentSituation();
-    if (new_error > current_error) {
+    /*if (new_error > current_error) {
       AddDeltaP(-delta_p);
       break;
-    };
+    };*/
   }
 }
 

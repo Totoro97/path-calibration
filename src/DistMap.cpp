@@ -110,18 +110,17 @@ bool DistMap::IsInside(const cv::Mat &img, int i, int j) {
 
 double DistMap::Distance(double a, double b) {
   const double eps = 1e-7;
-  if (a > eps && a < height_ - 1 - eps && b > eps && b < height_) {
+  if (a > eps && a < height_ - 1 - eps && b > eps && b < width_ - 1 - eps) {
     int a_i = static_cast<int>(a);
     int b_i = static_cast<int>(b);
     double bias_a = a - a_i;
     double bias_b = b - b_i;
     int idx = a_i * width_ + b_i;
-    double dist_1 = dist_map_[idx]     * (1.0 - bias_b) + dist_map_[idx + width_    ] * bias_b;
-    double dist_2 = dist_map_[idx + 1] * (1.0 - bias_b) + dist_map_[idx + width_ + 1] * bias_b;
-    return dist_1 * (1.0 - bias_a) + dist_2 * bias_a;
+    double dist_1 = dist_map_[idx]     * (1.0 - bias_a) + dist_map_[idx + width_    ] * bias_a;
+    double dist_2 = dist_map_[idx + 1] * (1.0 - bias_a) + dist_map_[idx + width_ + 1] * bias_a;
+    return dist_1 * (1.0 - bias_b) + dist_2 * bias_b;
   }
   else {
-    double dist = 0.0;
     int a_i = (int) std::min(std::max(1e-7, a), height_ - 1.0);
     int b_i = (int) std::min(std::max(1e-7, b), width_ - 1.0);
     return dist_map_[a_i * width_ + b_i] + std::abs(a_i - a) + std::abs(b_i - b);

@@ -14,12 +14,15 @@ public:
     dist_map_ = new DistMap(img_gray, true);
   }
 
-  void Run() {
+  void Run();
 
-  }
   ~Calibrator() {
     delete(dist_map_);
   }
   std::vector<Eigen::Vector2i> path_2d_;
+  std::vector<int> past_sampled_, next_sampled_;
+  std::vector<int> sampled_;
+  std::vector<double> depth_;
+
   DistMap *dist_map_ = nullptr;
 };

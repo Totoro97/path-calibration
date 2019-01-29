@@ -11,7 +11,7 @@ void Calibrator::Run() {
   past_sampled_.resize(path_2d_.size(), -1);
   next_sampled_.resize(path_2d_.size(), -1);
   // TODO: Hard code here.
-  depth_.resize(path_2d_.size(), 1000.0);
+  depth_.resize(path_2d_.size(), 1.0);
 
   for (int i = 0; i < path_2d_.size(); i++) {
     if (path_2d_[i](0) == -1) {
@@ -72,10 +72,10 @@ void Calibrator::Run() {
       int p_idx = -1;
       for (int p : sampled_) {
         p_idx++;
-        if (p_idx == 0) {
-          A(idx, p_idx) = 0.0;
+        /*if (p_idx == 0) {
+        A(idx, p_idx) = 0.0;
           continue;
-        }
+        }*/
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
           A(idx, p_idx) = 0.0;
           continue;
@@ -188,6 +188,7 @@ double Calibrator::GetDepth(int idx) {
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
+  // TODO: hard code here.
   double x = (j - dist_map_->width_  / 2.0) * depth;
   double y = (i - dist_map_->height_ / 2.0) * depth;
   double z = depth;
@@ -207,6 +208,8 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
   auto r_coord = t * Eigen::Vector3d(t_x, t_y, t_z);
 
   // std::cout << "z = " << r_coord(2) << std::endl;
+  // TODO: Hard code here.
+
   return Eigen::Vector2d(
     r_coord(1) / r_coord(2) + (double) dist_map_->height_ / 2,
     r_coord(0) / r_coord(2) + (double) dist_map_->width_ / 2

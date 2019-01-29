@@ -29,6 +29,7 @@ void Run(std::string img_0_path, std::string img_1_path) {
 
   // Test path?
   cv::Mat test_img(img_0.rows, img_0.cols, CV_8UC3);
+
   //for (const auto &pt : path_2d) {
   for (int i = 0; i < path_2d.size(); i++) {
     auto pt = path_2d[i];
@@ -36,8 +37,9 @@ void Run(std::string img_0_path, std::string img_1_path) {
     cv::imshow("path", test_img);
     cv::waitKey(10);
   }
+
   // Main algorithm
-  // Calibrater.Run(path_2d, img_1_gray);
+  Calibrater.Run(path_2d, img_1_gray);
 }
 
 int main() {

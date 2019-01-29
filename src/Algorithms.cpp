@@ -165,4 +165,19 @@ void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
 
   FindEulerPath(x_path_begin, y_path_begin);
   delete[](res);
+
+  for (auto &pt : path_2d) {
+    int x = pt(0), y = pt(1);
+    int du = 0;
+    for (int bias_x = -1; bias_x <= 1; bias_x++) {
+      for (int bias_y = -1; bias_y <= 1; bias_y++) {
+        if ((bias_x || bias_y) && IsNeighbor(x, y, bias_x, bias_y)) {
+          du++;
+        }
+      }
+    }
+    if (du > 2) {
+      pt(0) = pt(1) = -1; // Split Curves.
+    }
+  }
 }

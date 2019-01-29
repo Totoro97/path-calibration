@@ -72,8 +72,10 @@ void Calibrator::Run() {
       int p_idx = -1;
       for (int p : sampled_) {
         p_idx++;
-        // A(idx, p_idx) = 0.0;
-        // continue;
+        if (p_idx == 0) {
+          A(idx, p_idx) = 0.0;
+          continue;
+        }
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
           A(idx, p_idx) = 0.0;
           continue;

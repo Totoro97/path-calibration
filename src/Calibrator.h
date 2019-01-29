@@ -32,6 +32,7 @@ public:
   std::vector<int> past_sampled_, next_sampled_;
   std::vector<int> sampled_;
   std::vector<double> depth_;
+  int sit_counter_ = 0;
 
   DistMap *dist_map_ = nullptr;
   double cam_paras_[7] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 };

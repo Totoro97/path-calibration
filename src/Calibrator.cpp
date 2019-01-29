@@ -172,6 +172,7 @@ void Calibrator::ShowCurrentSituation() {
     cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(255, 0, 0), 1);
   }
   std::cout << "current_error: " << CalcCurrentError() << std::endl;
+  cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
   cv::imshow("Current", img);
   cv::waitKey(-1);
 }

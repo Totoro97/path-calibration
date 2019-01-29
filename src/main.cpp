@@ -29,7 +29,7 @@ void Run(std::string img_0_path, std::string img_1_path) {
   Algo::GetPathPoints(img_0_gray, path_2d);
 
   // Test path.
-
+  /*
   cv::Mat test_img(img_0.rows, img_0.cols, CV_8UC3);
   for (const auto &pt : path_2d) {
     if (pt(0) < 0) {
@@ -39,6 +39,7 @@ void Run(std::string img_0_path, std::string img_1_path) {
     cv::imshow("path", test_img);
     cv::waitKey(10);
   }
+  */
 
   // Main algorithm
   Calibrator calibrator(path_2d, img_1_gray);

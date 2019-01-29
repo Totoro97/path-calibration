@@ -18,6 +18,7 @@ public:
   }
 
   void Run();
+  void ShowSampledPoints();
   void ShowCurrentSituation();
   double GetDepth(int idx);
   Eigen::Vector2d Warp(int i, int j, double depth);

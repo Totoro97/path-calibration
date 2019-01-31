@@ -101,6 +101,7 @@ void Calibrator::Run() {
       }
     }
 
+
     // Solve least square.
     // Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(-B);
     // ---------------------
@@ -114,6 +115,14 @@ void Calibrator::Run() {
     // delta_p *= -1e-8/ num_valid_funcs;
 
     //exit(0);
+    double max_pix_move = pix_move.maxCoeff() / num_valid_funcs;
+    // TODO: Hard code here.
+    // TODO: Rewrite pix move.
+    // auto pix_move = Eigen::VectorXd::Zero(7 + num_ex_paras_);
+    Eigen::VectorXd pix_move = Eigen::VectorXd::Zero(7 + num_ex_paras_);
+    /*if (max_pix_move > 10.0) {
+      delta_p *= 10.0 / max_pix_move;
+    }*/
     double current_error = CalcCurrentError();
     while (true) {
       std::cout << delta_p << std::endl;
@@ -204,7 +213,7 @@ double Calibrator::GetDepth(int idx) {
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
   // double focal_length = std::exp(cam_paras_[6]);
   // double focal_length = cam_paras_[6];
-  double focal_length = 10.0;
+  double focal_length = 1.0;
 
   double x = (j - dist_map_->width_  / 2.0) * focal_length * depth;
   double y = (i - dist_map_->height_ / 2.0) * focal_length * depth;

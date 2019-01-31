@@ -11,7 +11,7 @@ void Calibrator::Run() {
   past_sampled_.resize(path_2d_.size(), -1);
   next_sampled_.resize(path_2d_.size(), -1);
   // TODO: Hard code here.
-  depth_.resize(path_2d_.size(), 1.0);
+  depth_.resize(path_2d_.size(), 0.0);
 
   for (int i = 0; i < path_2d_.size(); i++) {
     if (path_2d_[i](0) == -1) {
@@ -51,9 +51,11 @@ void Calibrator::Run() {
 
   // ShowSampledPoints();
   ShowCurrentSituation();
+  int iter_counter = 0;
   while (true) {
-    Eigen::MatrixXd A(num_valid_funcs, 7 + num_ex_paras_);
-    Eigen::VectorXd B(num_valid_funcs);
+    iter_counter++;
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_valid_funcs, 7 + num_ex_paras_);
+    Eigen::VectorXd B = Eigen::VectorXd::Zero(num_valid_funcs);
     int idx = -1;
     for (int i = 0; i < path_2d_.size(); i++) {
       if (path_2d_[i](0) == -1) {
@@ -62,7 +64,7 @@ void Calibrator::Run() {
       idx++;
       auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
       B(idx) = dist_map_->Distance(warped(0), warped(1));
-      const double step_len = 1.0 / (double) (1 << 15);
+      const double step_len = 1.0 / (double) (1 << 10);
       Eigen::Vector2d grad_i;
       grad_i(0) =
         (dist_map_->Distance(warped(0) + step_len, warped(1)) - B(idx)) / step_len;
@@ -73,8 +75,7 @@ void Calibrator::Run() {
       for (int p : sampled_) {
         p_idx++;
         // fix first depth
-        if (p_idx == 0) {
-          A(idx, p_idx) = 0.0;
+        if (p_idx == 0 || (iter_counter & 3) != 0) {
           continue;
         }
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
@@ -91,6 +92,15 @@ void Calibrator::Run() {
       // Camera Paras.
       for (int t = 0; t < 7; t++) {
         p_idx++;
+        if (t < 3 && (iter_counter & 3) != 1) {
+          continue;
+        }
+        if (t >= 3 && t < 6 && (iter_counter & 3) != 2) {
+          continue;
+        }
+        if (t >= 6 && (iter_counter & 3) != 3) {
+          continue;
+        }
         cam_paras_[t] += step_len;
         auto new_warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
         cam_paras_[t] -= step_len;
@@ -101,6 +111,13 @@ void Calibrator::Run() {
       }
     }
 
+    for (int i = 0; i < num_valid_funcs; i++) {
+      for (int j = 0; j < 7 + num_ex_paras_; j++) {
+        if (A(i, j) < 1e-6 && A(i, j) > -1e-6) {
+          A(i, j) = 0.0;
+        }
+      }
+    }
 
     // Solve least square.
     // Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(-B);
@@ -110,19 +127,18 @@ void Calibrator::Run() {
     // Or: Grad?
     // Eigen::VectorXd delta_p = Eigen::VectorXd::Zero(7 + num_ex_paras_);
     // for (int i = 0; i < num_valid_funcs; i++) {
-    //  delta_p += A.block(i, 0, 1, 7 + num_ex_paras_).transpose();
+    //   delta_p += A.block(i, 0, 1, 7 + num_ex_paras_).transpose();
     // }
-    // delta_p *= -1e-8/ num_valid_funcs;
+    // delta_p *= -1e-3 / num_valid_funcs;
 
     //exit(0);
-    double max_pix_move = pix_move.maxCoeff() / num_valid_funcs;
-    // TODO: Hard code here.
-    // TODO: Rewrite pix move.
-    // auto pix_move = Eigen::VectorXd::Zero(7 + num_ex_paras_);
-    Eigen::VectorXd pix_move = Eigen::VectorXd::Zero(7 + num_ex_paras_);
-    /*if (max_pix_move > 10.0) {
-      delta_p *= 10.0 / max_pix_move;
-    }*/
+    // TODO: Pix move.
+    // Eigen::VectorXd pix_move = Eigen::VectorXd::Zero(7 + num_ex_paras_);
+    // for (int i = 0; i < path_2d_.size(); i++) {
+    //  if (path_2d_[i](0) == -1) continue;
+    //
+    //}
+
     double current_error = CalcCurrentError();
     while (true) {
       std::cout << delta_p << std::endl;
@@ -199,15 +215,17 @@ void Calibrator::ShowCurrentSituation() {
 }
 
 double Calibrator::GetDepth(int idx) {
+  double depth;
   if (next_sampled_[idx] == idx) {
-    return depth_[idx];
+    depth = depth_[idx];
   }
   else {
     int a = past_sampled_[idx];
     int b = next_sampled_[idx];
     double bias = ((double) (idx - a)) / ((double) (b - a));
-    return depth_[a] * (1.0 - bias) + depth_[b] * bias;
+    depth = depth_[a] * (1.0 - bias) + depth_[b] * bias;
   }
+  return std::exp(depth);
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {

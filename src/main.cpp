@@ -69,7 +69,7 @@ void Run(std::string img_0_path, std::string img_1_path) {
 }
 
 int main() {
-  Run("data/0_0.png", "data/0_1.png");
-  // Run("data/0.png", "data/1.png");
+  Run("data/7_0.png", "data/7_1.png");
+  //Run("backup/0.png", "backup/1.png");
   return 0;
 }

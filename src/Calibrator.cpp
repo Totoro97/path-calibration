@@ -62,7 +62,7 @@ void Calibrator::Run() {
       idx++;
       auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
       B(idx) = dist_map_->Distance(warped(0), warped(1));
-      const double step_len = 1.0 / (double) (1 << 10);
+      const double step_len = 1.0 / (double) (1 << 15);
       Eigen::Vector2d grad_i;
       grad_i(0) =
         (dist_map_->Distance(warped(0) + step_len, warped(1)) - B(idx)) / step_len;
@@ -95,20 +95,23 @@ void Calibrator::Run() {
         auto new_warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
         cam_paras_[t] -= step_len;
         A(idx, p_idx) = grad_i.dot((new_warped - warped) / step_len);
+        if (t == 6) {
+          std::cout << "focus length gradient: " << A(idx, p_idx) << std::endl;
+        }
       }
     }
 
     // Solve least square.
     // Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(-B);
     // ---------------------
-    Eigen::VectorXd delta_p = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(-B);
+    // Eigen::VectorXd delta_p = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(-B);
     // ---------------------
     // Or: Grad?
-    // Eigen::VectorXd delta_p = Eigen::VectorXd::Zero(7 + num_ex_paras_);
-    // for (int i = 0; i < num_valid_funcs; i++) {
-    //  delta_p += A.block(i, 0, 1, 7 + num_ex_paras_).transpose();
-    // }
-    // delta_p *= -1e-3 / num_valid_funcs;
+    Eigen::VectorXd delta_p = Eigen::VectorXd::Zero(7 + num_ex_paras_);
+    for (int i = 0; i < num_valid_funcs; i++) {
+      delta_p += A.block(i, 0, 1, 7 + num_ex_paras_).transpose();
+    }
+    delta_p *= -1e-6 / num_valid_funcs;
 
     std::cout << delta_p << std::endl;
     //exit(0);
@@ -190,8 +193,11 @@ double Calibrator::GetDepth(int idx) {
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
-  double x = (j - dist_map_->width_  / 2.0) * depth;
-  double y = (i - dist_map_->height_ / 2.0) * depth;
+  //double focal_length = std::exp(cam_paras_[6]);
+  double focal_length = cam_paras_[6];
+
+  double x = (j - dist_map_->width_  / 2.0) * focal_length * depth;
+  double y = (i - dist_map_->height_ / 2.0) * focal_length * depth;
   double z = depth;
   // 0, 1, 2: translation.
   double t_x = x + cam_paras_[0];
@@ -200,7 +206,7 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
   // 3, 4, 5: rotation.
   Eigen::Vector3d w(cam_paras_[3], cam_paras_[4], cam_paras_[5]);
   Eigen::Matrix3d t;
-  if (w.norm() < 1e-4) {
+  if (w.norm() < 1e-6) {
     t.setIdentity();
   }
   else {
@@ -210,7 +216,7 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
 
   // std::cout << "z = " << r_coord(2) << std::endl;
   return Eigen::Vector2d(
-    r_coord(1) / r_coord(2) + (double) dist_map_->height_ / 2,
-    r_coord(0) / r_coord(2) + (double) dist_map_->width_ / 2
+    r_coord(1) / (r_coord(2) * focal_length) + (double) dist_map_->height_ / 2,
+    r_coord(0) / (r_coord(2) * focal_length) + (double) dist_map_->width_ / 2
     );
 }

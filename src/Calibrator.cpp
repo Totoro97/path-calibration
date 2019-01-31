@@ -23,11 +23,11 @@ void Calibrator::Run() {
       sampled_.push_back(i);
       num_ex_paras_++;
     }
-    else if (i % 40 == 0) {
+    /*else if (i % 40 == 0) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
       num_ex_paras_++;
-    }
+    }*/
   }
   std::cout << "num_ex_paras = " << num_ex_paras_ << std::endl;
 
@@ -95,30 +95,39 @@ void Calibrator::Run() {
         auto new_warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
         cam_paras_[t] -= step_len;
         A(idx, p_idx) = grad_i.dot((new_warped - warped) / step_len);
-        if (t == 6) {
-          std::cout << "focus length gradient: " << A(idx, p_idx) << std::endl;
-        }
+        //if (t == 6) {
+        //  std::cout << "focus length gradient: " << A(idx, p_idx) << std::endl;
+        //}
       }
     }
 
     // Solve least square.
     // Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(-B);
     // ---------------------
-    // Eigen::VectorXd delta_p = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(-B);
+    Eigen::VectorXd delta_p = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(-B);
     // ---------------------
     // Or: Grad?
-    Eigen::VectorXd delta_p = Eigen::VectorXd::Zero(7 + num_ex_paras_);
-    for (int i = 0; i < num_valid_funcs; i++) {
-      delta_p += A.block(i, 0, 1, 7 + num_ex_paras_).transpose();
-    }
-    delta_p *= -1e-6 / num_valid_funcs;
+    // Eigen::VectorXd delta_p = Eigen::VectorXd::Zero(7 + num_ex_paras_);
+    // for (int i = 0; i < num_valid_funcs; i++) {
+    //  delta_p += A.block(i, 0, 1, 7 + num_ex_paras_).transpose();
+    // }
+    // delta_p *= -1e-8/ num_valid_funcs;
 
-    std::cout << delta_p << std::endl;
     //exit(0);
     double current_error = CalcCurrentError();
-    AddDeltaP(delta_p);
-    double new_error = CalcCurrentError();
-    ShowCurrentSituation();
+    while (true) {
+      std::cout << delta_p << std::endl;
+      AddDeltaP(delta_p);
+      double new_error = CalcCurrentError();
+      ShowCurrentSituation();
+      /*if (new_error > current_error * 1.1 || delta_p.norm() > 1.0 ) {
+        AddDeltaP(-delta_p);
+        delta_p *= 0.5;
+      }
+      else {*/
+        break;
+      //}
+    }
     /*if (new_error > current_error) {
       AddDeltaP(-delta_p);
       break;
@@ -193,8 +202,9 @@ double Calibrator::GetDepth(int idx) {
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
-  //double focal_length = std::exp(cam_paras_[6]);
-  double focal_length = cam_paras_[6];
+  // double focal_length = std::exp(cam_paras_[6]);
+  // double focal_length = cam_paras_[6];
+  double focal_length = 10.0;
 
   double x = (j - dist_map_->width_  / 2.0) * focal_length * depth;
   double y = (i - dist_map_->height_ / 2.0) * focal_length * depth;

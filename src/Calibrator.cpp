@@ -23,11 +23,11 @@ void Calibrator::Run() {
       sampled_.push_back(i);
       num_ex_paras_++;
     }
-    else if (i % 40 == 0) {
+    /*else if (i % 40 == 0) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
       num_ex_paras_++;
-    }
+    }*/
   }
   std::cout << "num_ex_paras = " << num_ex_paras_ << std::endl;
 

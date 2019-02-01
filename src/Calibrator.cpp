@@ -23,11 +23,11 @@ void Calibrator::Run() {
       sampled_.push_back(i);
       num_ex_paras_++;
     }
-    /*else if (i % 40 == 0) {
+    else if (i % 40 == 0) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
       num_ex_paras_++;
-    }*/
+    }
   }
   std::cout << "num_ex_paras = " << num_ex_paras_ << std::endl;
 
@@ -50,6 +50,7 @@ void Calibrator::Run() {
   }
 
   // ShowSampledPoints();
+  SaveCurrentPoints();
   ShowCurrentSituation();
   int iter_counter = 0;
   while (true) {
@@ -144,6 +145,7 @@ void Calibrator::Run() {
       std::cout << delta_p << std::endl;
       AddDeltaP(delta_p);
       double new_error = CalcCurrentError();
+      SaveCurrentPoints();
       ShowCurrentSituation();
       /*if (new_error > current_error * 1.1 || delta_p.norm() > 1.0 ) {
         AddDeltaP(-delta_p);
@@ -209,10 +211,27 @@ void Calibrator::ShowCurrentSituation() {
     cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(255, 0, 0), 1);
   }
   std::cout << "current_error: " << CalcCurrentError() << std::endl;
-  cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
+  // cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
   cv::imshow("Current", img);
   cv::waitKey(-1);
 }
+
+void Calibrator::SaveCurrentPoints() {
+  std::vector<Eigen::Vector3d> points;
+  for (int i = 0; i < path_2d_.size(); i++) {
+    if (path_2d_[i](0) == -1) {
+      continue;
+    }
+    // TODO: Hard code here.
+    double focal_length = std::exp(cam_paras_[6]);
+    double z = GetDepth(i);
+    double x = (path_2d_[i](1) - dist_map_->width_ / 2.0) * focal_length * z;
+    double y = (path_2d_[i](0) - dist_map_->height_ / 2.0) * focal_length * z;
+    points.emplace_back(z, x, y);
+  }
+  Utils::SavePointsAsPly("current.ply", points);
+}
+
 
 double Calibrator::GetDepth(int idx) {
   double depth;
@@ -229,9 +248,9 @@ double Calibrator::GetDepth(int idx) {
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
-  // double focal_length = std::exp(cam_paras_[6]);
+  double focal_length = std::exp(cam_paras_[6]);
   // double focal_length = cam_paras_[6];
-  double focal_length = 1.0;
+  // double focal_length = 1.0;
 
   double x = (j - dist_map_->width_  / 2.0) * focal_length * depth;
   double y = (i - dist_map_->height_ / 2.0) * focal_length * depth;

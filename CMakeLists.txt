@@ -14,6 +14,8 @@ include_directories(/usr/include/eigen3/Eigen)
 set(SOURCE_FILES src/Algorithms.cpp src/Algorithms.h)
 set(SOURCE_FILES ${SOURCE_FILES} src/Calibrator.cpp src/Calibrator.h)
 set(SOURCE_FILES ${SOURCE_FILES} src/DistMap.cpp src/DistMap.h)
+set(SOURCE_FILES ${SOURCE_FILES} src/ViewTransformer.cpp src/ViewTransformer.h)
+set(SOURCE_FILES ${SOURCE_FILES} src/Utils.cpp src/Utils.h)
 set(SOURCE_FILES ${SOURCE_FILES} src/Thinning.h)
 
 add_executable(PathCalibration ${SOURCE_FILES} src/main.cpp)

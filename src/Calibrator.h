@@ -38,5 +38,5 @@ public:
   int sit_counter_ = 0;
 
   DistMap *dist_map_ = nullptr;
-  double cam_paras_[7] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -3.0 };
+  double cam_paras_[7] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.95 };
 };

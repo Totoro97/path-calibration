@@ -11,7 +11,7 @@ void Calibrator::Run() {
   past_sampled_.resize(path_2d_.size(), -1);
   next_sampled_.resize(path_2d_.size(), -1);
   // TODO: Hard code here.
-  depth_.resize(path_2d_.size(), 0.0);
+  depth_.resize(path_2d_.size(), 2.3);
 
   for (int i = 0; i < path_2d_.size(); i++) {
     if (path_2d_[i](0) == -1) {
@@ -23,11 +23,11 @@ void Calibrator::Run() {
       sampled_.push_back(i);
       num_ex_paras_++;
     }
-    /*else if (i % 40 == 0) {
+    else if (i % 40 == 0) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
       num_ex_paras_++;
-    }*/
+    }
   }
   std::cout << "num_ex_paras = " << num_ex_paras_ << std::endl;
 
@@ -114,7 +114,7 @@ void Calibrator::Run() {
 
     for (int i = 0; i < num_valid_funcs; i++) {
       for (int j = 0; j < 7 + num_ex_paras_; j++) {
-        if (A(i, j) < 1e-6 && A(i, j) > -1e-6) {
+        if (A(i, j) < 1e-4 && A(i, j) > -1e-4) {
           A(i, j) = 0.0;
         }
       }

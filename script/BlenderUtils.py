@@ -37,7 +37,7 @@ def GenerateRandomCurve(curve_name = 'MyCurve') :
 
     # Subdivide the curve by a number of cuts, giving the
     # random vertex function more points to work with.
-    ops.curve.subdivide(number_cuts = 2)
+    # ops.curve.subdivide(number_cuts = 0)
 
     # Randomize the vertices of the bezier circle.
     # offset [-inf .. inf], uniform [0.0 .. 1.0],

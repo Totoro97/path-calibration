@@ -127,7 +127,8 @@ double DistMap::Distance(double a, double b) {
     distance = dist_map_[a_i * width_ + b_i] + std::abs(a_i - a) + std::abs(b_i - b);
   }
   // TODO: Hard code here.
-  return distance * distance / (250.0 * 250.0);
+  double ratio = 1.0;
+  return distance * distance / (ratio * ratio);
 }
 
 void DistMap::ShowDistMap() {

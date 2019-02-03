@@ -93,10 +93,10 @@ void Calibrator::Run() {
       // Camera Paras.
       for (int t = 0; t < 7; t++) {
         p_idx++;
-        if (t < 3 && (iter_counter & 3) != 1) {
+        if (t < 3 && (iter_counter & 3) != 2) {
           continue;
         }
-        if (t >= 3 && t < 6 && (iter_counter & 3) != 2) {
+        if (t >= 3 && t < 6 && (iter_counter & 3) != 1) {
           continue;
         }
         if (t >= 6 && (iter_counter & 3) != 3) {
@@ -112,14 +112,30 @@ void Calibrator::Run() {
       }
     }
 
-    for (int i = 0; i < num_valid_funcs; i++) {
-      for (int j = 0; j < 7 + num_ex_paras_; j++) {
-        if (A(i, j) < 1e-4 && A(i, j) > -1e-4) {
-          A(i, j) = 0.0;
+    // Drop out.
+    // TODO: Hard code here.
+    double drop_out_ratio = 0.5;
+    double all_sum = 0.0;
+    std::vector<std::pair<double, int> > rank_list;
+    for (int j = 0; j < 7 + num_ex_paras_; j++) {
+      double tmp_sum = 0.0;
+      for (int i = 0; i < num_valid_funcs; i++) {
+        tmp_sum += std::abs(A(i, j));
+      }
+      rank_list.emplace_back(tmp_sum, j);
+      all_sum += tmp_sum;
+    }
+    std::sort(rank_list.begin(), rank_list.end());
+    double res = all_sum * drop_out_ratio;
+    for (auto iter = rank_list.begin(); iter != rank_list.end() && res > 0.0; iter++) {
+      res -= iter->first;
+      if (res > 1e-9) {
+        int idx_p = iter->second;
+        for (int idx_i = 0; idx_i < num_valid_funcs; idx_i++) {
+          A(idx_i, idx_p) = 0.0;
         }
       }
     }
-
     // Solve least square.
     // Eigen::VectorXd delta_p = A.colPivHouseholderQr().solve(-B);
     // ---------------------
@@ -132,13 +148,14 @@ void Calibrator::Run() {
     // }
     // delta_p *= -1e-3 / num_valid_funcs;
 
-    //exit(0);
-    // TODO: Pix move.
-    // Eigen::VectorXd pix_move = Eigen::VectorXd::Zero(7 + num_ex_paras_);
-    // for (int i = 0; i < path_2d_.size(); i++) {
-    //  if (path_2d_[i](0) == -1) continue;
-    //
-    //}
+    res = all_sum * drop_out_ratio;
+    for (auto iter = rank_list.begin(); iter != rank_list.end() && res > 0.0; iter++) {
+      res -= iter->first;
+      if (res > 1e-9) {
+        int idx_p = iter->second;
+        delta_p(idx_p) = 0.0;
+      }
+    }
 
     double current_error = CalcCurrentError();
     while (true) {

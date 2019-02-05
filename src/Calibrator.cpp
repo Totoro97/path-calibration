@@ -114,7 +114,7 @@ void Calibrator::Run() {
 
     // Drop out.
     // TODO: Hard code here.
-    double drop_out_ratio = 0.5;
+    double drop_out_ratio = 0.2;
     double all_sum = 0.0;
     std::vector<std::pair<double, int> > rank_list;
     for (int j = 0; j < 7 + num_ex_paras_; j++) {
@@ -193,7 +193,7 @@ void Calibrator::ShowSampledPoints() {
   cv::Mat img(dist_map_->height_, dist_map_->width_, CV_8UC3, cv::Scalar(0, 0, 0));
   for (int i = 0; i < path_2d_.size(); i++) {
     if (next_sampled_[i] == i) {
-      cv::circle(img, cv::Point(path_2d_[i](1), path_2d_[i](0)), 0, cv::Scalar(0, 255, 0), 1);
+      cv::circle(img, cv::Point(path_2d_[i](1), path_2d_[i](0)), 0, cv::Scalar(0, 255, 255), 1);
     }
   }
   cv::imshow("Sampled", img);
@@ -225,7 +225,7 @@ void Calibrator::ShowCurrentSituation() {
     }
     idx++;
     auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
-    cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(255, 0, 0), 1);
+    cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(0, 255, 255), 1);
   }
   std::cout << "current_error: " << CalcCurrentError() << std::endl;
   // cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);

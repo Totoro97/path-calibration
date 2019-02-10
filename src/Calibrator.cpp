@@ -114,7 +114,7 @@ void Calibrator::Run() {
 
     // Drop out.
     // TODO: Hard code here.
-    double drop_out_ratio = 0.2;
+    double drop_out_ratio = 0.01;
     double all_sum = 0.0;
     std::vector<std::pair<double, int> > rank_list;
     for (int j = 0; j < 7 + num_ex_paras_; j++) {
@@ -130,6 +130,7 @@ void Calibrator::Run() {
     for (auto iter = rank_list.begin(); iter != rank_list.end() && res > 0.0; iter++) {
       res -= iter->first;
       if (res > 1e-9) {
+        std::cout << "bababababbabababa: " << iter->first << std::endl;
         int idx_p = iter->second;
         for (int idx_i = 0; idx_i < num_valid_funcs; idx_i++) {
           A(idx_i, idx_p) = 0.0;
@@ -228,7 +229,7 @@ void Calibrator::ShowCurrentSituation() {
     cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(0, 255, 255), 1);
   }
   std::cout << "current_error: " << CalcCurrentError() << std::endl;
-  // cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
+  cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
   cv::imshow("Current", img);
   cv::waitKey(-1);
 }

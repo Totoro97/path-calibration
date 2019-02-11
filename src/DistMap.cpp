@@ -128,8 +128,7 @@ double DistMap::Distance(double a, double b) {
   }
   // TODO: Hard code here.
   double ratio = 1.0;
-  // return distance * distance / (ratio * ratio);
-  return distance;
+  return distance * distance / (ratio * ratio);
 }
 
 void DistMap::ShowDistMap() {

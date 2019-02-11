@@ -12,15 +12,13 @@
 
 class Calibrator {
 public:
-  Calibrator(const std::vector<Eigen::Vector2i> &path_2d, const cv::Mat &img_gray):
-    path_2d_(path_2d), img_gray_(img_gray) {
-    dist_map_ = new DistMap(img_gray, true);
-    dist_map_->ShowDistMap();
-  }
+  Calibrator(const std::vector<Eigen::Vector2i> &path_2d, const cv::Mat &img_gray, Calibrator *past_calibrator = nullptr);
+
   ~Calibrator() {
     delete(dist_map_);
   }
 
+  void InitializeParameters(Calibrator *past_calibrator);
   void AddDeltaP(const Eigen::VectorXd &delta_p);
   double CalcCurrentError();
   void Run();
@@ -28,9 +26,10 @@ public:
   void ShowCurrentSituation();
   void SaveCurrentPoints();
   double GetDepth(int idx);
+  double WarpDepth(int i, int j, double depth);
+  Eigen::Vector2d Warp(int i, int j, double depth);
 
   cv::Mat img_gray_;
-  Eigen::Vector2d Warp(int i, int j, double depth);
   std::vector<Eigen::Vector2i> path_2d_;
   std::vector<int> past_sampled_, next_sampled_;
   std::vector<int> sampled_;

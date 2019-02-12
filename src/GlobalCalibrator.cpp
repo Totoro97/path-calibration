@@ -27,7 +27,8 @@ GlobalCalibrator::~GlobalCalibrator() {
 }
 
 void GlobalCalibrator::Run() {
-  for (int l = 1; l < num_frame_; l++) {
+  // One way
+  /*for (int l = 1; l < num_frame_; l++) {
     for (int i = 0; i + l < num_frame_; i++) {
       int j = i + l;
       auto cali_0 = calibrators_[i];
@@ -38,6 +39,23 @@ void GlobalCalibrator::Run() {
         cali_1->Run(20);
         cali_0->InitializeParameters(cali_1);
         cali_0->Run(20);
+      }
+    }
+  }*/
+  // Another way
+  for (int i = 0; i < num_frame_; i++) {
+    for (int T = 5; T >= 0; T--) {
+      for (int k = i; k >= 0; k--) {
+        auto cali_1 = calibrators_[i];
+        for (int j = k - 1; j >= 0; j--) {
+          auto cali_0 = calibrators_[j];
+          for (int cnt = 0; cnt < 1; cnt++) {
+            cali_1->InitializeParameters(cali_0);
+            cali_1->Run(20);
+            cali_0->InitializeParameters(cali_1);
+            cali_0->Run(20);
+          }
+        }
       }
     }
   }

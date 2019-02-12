@@ -46,7 +46,7 @@ void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
 
     // depth
     // TODO: Hard code here.
-    new_depths.resize(path_2d_.size(), 2.3);
+    new_depths.resize(path_2d_.size(), 0.0);
     tmp_sum.resize(path_2d_.size(), 0.0);
     for (int i = 0; i < another_calibrator->path_2d_.size(); i++) {
       auto pix_2d = another_calibrator->path_2d_[i];
@@ -79,8 +79,8 @@ void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
     // TODO: Hard code here.
     double change_ratio = 1.0;
     for (int j = 0; j < path_2d_.size(); j++) {
-      if (tmp_sum[j] > 1e-9) {
-        depth_[j] = depth_[j] * (1.0 - change_ratio) + new_depths[j] * change_ratio;
+      if (tmp_sum[j] > 1e-6) {
+        depth_[j] = depth_[j] * (1.0 - change_ratio) + (new_depths[j] / tmp_sum[j]) * change_ratio;
       }
     }
   }
@@ -133,7 +133,8 @@ void Calibrator::Run(int max_iter_num) {
   ShowCurrentSituation();
   int iter_counter = 0;
   double current_error = CalcCurrentError();
-  while (iter_counter++ < max_iter_num) {
+  // TODO: Hard code here.
+  while (iter_counter++ < max_iter_num && current_error > 1.0) {
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_valid_funcs, 7 + num_ex_paras_);
     Eigen::VectorXd B = Eigen::VectorXd::Zero(num_valid_funcs);
     int idx = -1;
@@ -159,8 +160,6 @@ void Calibrator::Run(int max_iter_num) {
           continue;
         }
         // TODO: Hard code here.
-        if (iter_counter < 12)
-          continue;
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
           A(idx, p_idx) = 0.0;
           continue;
@@ -196,7 +195,7 @@ void Calibrator::Run(int max_iter_num) {
 
     // Drop out.
     // TODO: Hard code here.
-    double drop_out_ratio = 0.01;
+    double drop_out_ratio = 0.1;
     double all_sum = 0.0;
     std::vector<std::pair<double, int> > rank_list;
     for (int j = 0; j < 7 + num_ex_paras_; j++) {
@@ -212,7 +211,7 @@ void Calibrator::Run(int max_iter_num) {
     for (auto iter = rank_list.begin(); iter != rank_list.end() && res > 0.0; iter++) {
       res -= iter->first;
       if (res > 1e-9) {
-        std::cout << "bababababbabababa: " << iter->first << std::endl;
+        // std::cout << "bababababbabababa: " << iter->first << std::endl;
         int idx_p = iter->second;
         for (int idx_i = 0; idx_i < num_valid_funcs; idx_i++) {
           A(idx_i, idx_p) = 0.0;
@@ -246,7 +245,9 @@ void Calibrator::Run(int max_iter_num) {
     double new_error = CalcCurrentError();
     SaveCurrentPoints();
     ShowCurrentSituation();
-    if (new_error > current_error) {
+    // TODO: Hard code here.
+
+    if (new_error > current_error * 2.0) {
       AddDeltaP(-delta_p);
       break;
     }
@@ -280,6 +281,12 @@ void Calibrator::ShowSampledPoints() {
 }
 
 double Calibrator::CalcCurrentError() {
+  for (int p : sampled_) {
+    // TODO: Hard code here.
+    if (depth_[p] < 1e-3) {
+      return 1e10;
+    }
+  }
   int idx = -1;
   double current_error = 0;
   for (int i = 0; i < path_2d_.size(); i++) {
@@ -309,7 +316,7 @@ void Calibrator::ShowCurrentSituation() {
   std::cout << "current_error: " << CalcCurrentError() << std::endl;
   // cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
   cv::imshow(std::to_string(frame_id_) + " -> " + std::to_string(another_calibrator_->frame_id_), img);
-  cv::waitKey(-1);
+  cv::waitKey(20);
 }
 
 void Calibrator::SaveCurrentPoints() {

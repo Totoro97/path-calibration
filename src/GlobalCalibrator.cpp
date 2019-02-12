@@ -32,11 +32,13 @@ void GlobalCalibrator::Run() {
       int j = i + l;
       auto cali_0 = calibrators_[i];
       auto cali_1 = calibrators_[j];
-      cali_1->InitializeParameters(cali_0);
       // TODO: Hard code here.
-      cali_1->Run(20);
-      cali_0->InitializeParameters(cali_1);
-      cali_0->Run(20);
+      for (int cnt = 0; cnt < 3; cnt++) {
+        cali_1->InitializeParameters(cali_0);
+        cali_1->Run(20);
+        cali_0->InitializeParameters(cali_1);
+        cali_0->Run(20);
+      }
     }
   }
 }

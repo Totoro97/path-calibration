@@ -19,6 +19,6 @@ set(SOURCE_FILES ${SOURCE_FILES} src/ViewTransformer.cpp src/ViewTransformer.h)
 set(SOURCE_FILES ${SOURCE_FILES} src/Utils.cpp src/Utils.h)
 set(SOURCE_FILES ${SOURCE_FILES} src/Thinning.h)
 
-add_executable(PathCalibration ${SOURCE_FILES} src/main.cpp)
+add_executable(PathCalibration ${SOURCE_FILES} src/Main.cpp)
 
 target_link_libraries(PathCalibration ${OpenCV_LIBS})

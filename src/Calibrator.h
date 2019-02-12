@@ -12,7 +12,7 @@
 
 class Calibrator {
 public:
-  Calibrator(const cv::Mat &img_gray) : img_gray_(img_gray);
+  Calibrator(const cv::Mat &img_gray);
 
   ~Calibrator() {
     delete(dist_map_);

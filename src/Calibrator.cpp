@@ -6,15 +6,16 @@
 #include "Calibrator.h"
 
 
-Calibrator(const cv::Mat &img_gray) : img_gray_(img_gray) {
+Calibrator::Calibrator(const cv::Mat &img_gray) : img_gray_(img_gray) {
   height_ = img_gray.rows;
   width_ = img_gray.cols;
-  Algo::GetPathPoints(path_2d_, img_gray_);
+  Algo::GetPathPoints(img_gray_, path_2d_);
   dist_map_ = new DistMap(img_gray, true);
   InitializeParameters(nullptr);
+  InitialSample();
 }
 
-// ----------------- deprecated -----------------
+// ---------------------------- deprecated ------------------------------
 /*
 Calibrator::Calibrator(const std::vector<Eigen::Vector2i> &path_2d,
                        const cv::Mat &img_gray,
@@ -41,11 +42,11 @@ void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
   }
   else {
     std::vector<double> tmp_sum;
-    std::vector<double> new_depth;
+    std::vector<double> new_depths;
 
     // depth
     // TODO: Hard code here.
-    new_depth.resize(path_2d_.size(), 2.3);
+    new_depths.resize(path_2d_.size(), 2.3);
     tmp_sum.resize(path_2d_.size(), 0.0);
     for (int i = 0; i < another_calibrator->path_2d_.size(); i++) {
       auto pix_2d = another_calibrator->path_2d_[i];
@@ -71,7 +72,7 @@ void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
         }
         double c = std::exp(-distance);
         tmp_sum[j] += c;
-        new_depth[j] += c * new_depth;
+        new_depths[j] += c * new_depth;
       }
     }
 
@@ -79,7 +80,7 @@ void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
     double change_ratio = 1.0;
     for (int j = 0; j < path_2d_.size(); j++) {
       if (tmp_sum[j] > 1e-9) {
-        depth_[j] = depth_[j] * (1.0 - change_ratio) + new_depth[j] * change_ratio;
+        depth_[j] = depth_[j] * (1.0 - change_ratio) + new_depths[j] * change_ratio;
       }
     }
   }

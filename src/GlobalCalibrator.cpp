@@ -16,7 +16,7 @@ GlobalCalibrator::GlobalCalibrator(std::string dir_name, int num_frame): num_fra
     }
 
     thinning(img_gray, img_gray);
-    calibrators_.push_back(new Calibrator(img_gray));
+    calibrators_.push_back(new Calibrator(img_gray, i));
   }
 }
 

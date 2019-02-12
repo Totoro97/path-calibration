@@ -9,6 +9,8 @@
 #include <queue>
 #include <set>
 
+/*---------------------------- deprecated --------------------------------------------
+
 void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
   int height = mat.rows;
   int width = mat.cols;
@@ -180,4 +182,101 @@ void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
       pt(0) = pt(1) = -1; // Split Curves.
     }
   }
+}
+
+*/
+
+void Algo::GetPathPoints(cv::Mat &mat, std::vector<Eigen::Vector2i> &path_2d) {
+  int height = mat.rows;
+  int width = mat.cols;
+  if (mat.channels() != 1) {
+    std::cout << "Error: channels not eq 1" << std::endl;
+    return;
+  }
+
+  uint8_t *data_ptr = mat.data;
+  auto IsNeighbor = [height, width, data_ptr](int x, int y, int bias_x, int bias_y) {
+    int a = x + bias_x;
+    int b = y + bias_y;
+    if (a < 0 || a >= height || b < 0 || b >= width) {
+      return false;
+    }
+    if (data_ptr[a * width + b] != 255) {
+      return false;
+    }
+    if (std::abs(bias_x) + std::abs(bias_y) <= 1)
+      return true;
+    a = x + bias_x;
+    b = y;
+    if (a >= 0 && a < height && b >= 0 && b < width && data_ptr[a * width + b] == 255) {
+      return false;
+    }
+    a = x;
+    b = y + bias_y;
+    if (a >= 0 && a < height && b >= 0 && b < width && data_ptr[a * width + b] == 255) {
+      return false;
+    }
+    return true;
+  };
+
+  auto du = new int[height * width];
+  std::memset(du, 0, height * width * sizeof(int));
+
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      if (data_ptr[i * width + j] != 255) {
+        continue;
+      }
+      for (int a = -1; a <= 1; a++) {
+        for (int b = -1; b <= 1; b++) {
+          if ((a || b) && IsNeighbor(i, j, a, b)) {
+            du[(i + a) * width + j + b]++;
+          }
+        }
+      }
+    }
+  }
+
+  auto vis = new int[height * width];
+  std::memset(vis, 0, height * width * sizeof(int));
+
+  std::function<void(int, int)> FindPath =
+    [&FindPath, height, width, data_ptr, &path_2d, &IsNeighbor, du, vis](int x, int y) {
+      vis[x * width + y] = 1;
+      path_2d.emplace_back(x, y);
+      for (int bias_x = -1; bias_x <= 1; bias_x++) {
+        for (int bias_y = -1; bias_y <= 1; bias_y++) {
+          if (!bias_x && !bias_y)
+            continue;
+          if (!IsNeighbor(x, y, bias_x, bias_y))
+            continue;
+          if (du[(x + bias_x) * width + y + bias_y] != 2 || vis[(x + bias_x) * width + y + bias_y] == 1)
+            continue;
+          FindPath(x + bias_x, y + bias_y);
+        }
+      }
+    };
+
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      if (data_ptr[i * width + j] != 255) {
+        continue;
+      }
+      if (du[i * width + j] != 2) {
+        continue;
+      }
+      for (int a = -1; a <= 1; a++) {
+        for (int b = -1; b <= 1; b++) {
+          if ((a || b) && IsNeighbor(i, j, a, b) && du[(i + a) * width + j + b] == 2
+          && !vis[(i + a) * width + j + b]) {
+            path_2d.emplace_back(-1, -1);
+            FindPath(i + a, j + b);
+          }
+        }
+      }
+    }
+  }
+
+  delete[](vis);
+  delete[](du);
 }

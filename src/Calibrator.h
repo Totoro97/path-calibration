@@ -12,7 +12,7 @@
 
 class Calibrator {
 public:
-  Calibrator(const cv::Mat &img_gray);
+  Calibrator(const cv::Mat &img_gray, int frame_id = 0);
 
   ~Calibrator() {
     delete(dist_map_);
@@ -40,6 +40,7 @@ public:
   int sit_counter_ = 0;
   int height_, width_;
   int num_ex_paras_;
+  int frame_id_;
   bool has_iterated_ = false;
   Calibrator *another_calibrator_;
   DistMap *dist_map_ = nullptr;

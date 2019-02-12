@@ -6,7 +6,7 @@
 #include "Calibrator.h"
 
 
-Calibrator::Calibrator(const cv::Mat &img_gray) : img_gray_(img_gray) {
+Calibrator::Calibrator(const cv::Mat &img_gray, int frame_id) : img_gray_(img_gray), frame_id_(frame_id) {
   height_ = img_gray.rows;
   width_ = img_gray.cols;
   Algo::GetPathPoints(img_gray_, path_2d_);
@@ -130,9 +130,9 @@ void Calibrator::Run(int max_iter_num) {
   }
 
   // ShowSampledPoints();
-  SaveCurrentPoints();
   ShowCurrentSituation();
   int iter_counter = 0;
+  double current_error = CalcCurrentError();
   while (iter_counter++ < max_iter_num) {
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_valid_funcs, 7 + num_ex_paras_);
     Eigen::VectorXd B = Eigen::VectorXd::Zero(num_valid_funcs);
@@ -143,13 +143,13 @@ void Calibrator::Run(int max_iter_num) {
       }
       idx++;
       auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
-      B(idx) = dist_map_->Distance(warped(0), warped(1));
+      B(idx) = another_calibrator_->dist_map_->Distance(warped(0), warped(1));
       const double step_len = 1.0 / (double) (1 << 10);
       Eigen::Vector2d grad_i;
       grad_i(0) =
-        (dist_map_->Distance(warped(0) + step_len, warped(1)) - B(idx)) / step_len;
+        (another_calibrator_->dist_map_->Distance(warped(0) + step_len, warped(1)) - B(idx)) / step_len;
       grad_i(1) =
-        (dist_map_->Distance(warped(0), warped(1) + step_len) - B(idx)) / step_len;
+        (another_calibrator_->dist_map_->Distance(warped(0), warped(1) + step_len) - B(idx)) / step_len;
       // Depth Paras.
       int p_idx = -1;
       for (int p : sampled_) {
@@ -241,26 +241,21 @@ void Calibrator::Run(int max_iter_num) {
     }
 
     double current_error = CalcCurrentError();
-    while (true) {
-      std::cout << delta_p << std::endl;
-      AddDeltaP(delta_p);
-      double new_error = CalcCurrentError();
-      SaveCurrentPoints();
-      ShowCurrentSituation();
-      /*if (new_error > current_error * 1.1 || delta_p.norm() > 1.0 ) {
-        AddDeltaP(-delta_p);
-        delta_p *= 0.5;
-      }
-      else {*/
-        break;
-      //}
-    }
-    /*if (new_error > current_error) {
+    std::cout << delta_p << std::endl;
+    AddDeltaP(delta_p);
+    double new_error = CalcCurrentError();
+    SaveCurrentPoints();
+    ShowCurrentSituation();
+    if (new_error > current_error) {
       AddDeltaP(-delta_p);
       break;
-    };*/
+    }
+    else {
+      current_error = new_error;
+    }
   }
   has_iterated_ = true;
+  cv::destroyAllWindows();
 }
 
 void Calibrator::AddDeltaP(const Eigen::VectorXd &delta_p) {
@@ -312,8 +307,8 @@ void Calibrator::ShowCurrentSituation() {
     cv::circle(img, cv::Point(warped(1), warped(0)), 0, cv::Scalar(0, 255, 255), 1);
   }
   std::cout << "current_error: " << CalcCurrentError() << std::endl;
-  cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
-  cv::imshow("Current", img);
+  // cv::imwrite(std::string("current_") + std::to_string(sit_counter_++) + std::string(".png"), img);
+  cv::imshow(std::to_string(frame_id_) + " -> " + std::to_string(another_calibrator_->frame_id_), img);
   cv::waitKey(-1);
 }
 

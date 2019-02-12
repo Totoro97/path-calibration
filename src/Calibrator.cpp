@@ -2,62 +2,89 @@
 // Created by aska on 19-1-29.
 //
 
+#include "Algorithms.h"
 #include "Calibrator.h"
 
+
+Calibrator(const cv::Mat &img_gray) : img_gray_(img_gray) {
+  height_ = img_gray.rows;
+  width_ = img_gray.cols;
+  Algo::GetPathPoints(path_2d_, img_gray_);
+  dist_map_ = new DistMap(img_gray, true);
+  InitializeParameters(nullptr);
+}
+
+// ----------------- deprecated -----------------
+/*
 Calibrator::Calibrator(const std::vector<Eigen::Vector2i> &path_2d,
                        const cv::Mat &img_gray,
-                       Calibrator *past_calibrator):
+                       Calibrator *another_calibrator):
   path_2d_(path_2d), img_gray_(img_gray) {
   dist_map_ = new DistMap(img_gray, true);
   dist_map_->ShowDistMap();
-  InitializeParameters(past_calibrator);
+  InitializeParameters(another_calibrator);
 }
+*/
 
-void Calibrator::InitializeParameters(Calibrator *past_calibrator) {
-  if (past_calibrator == nullptr) {
+void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
+  // Too many hard codes......
+  another_calibrator_ = another_calibrator;
+  if (another_calibrator == nullptr) {
     // TODO: Hard code here.
     depth_.resize(path_2d_.size(), 2.3);
-    return;
+    std::memset(cam_paras_, 0, sizeof(double) * 7);
   }
-  depth_.resize(path_2d_.size(), 0.0);
-  std::vector<double> tmp_sum;
-  tmp_sum.resize(path_2d_.size(), 0.0);
-  for (int i = 0; i < past_calibrator->path_2d_.size(); i++) {
-    auto pix_2d = past_calibrator->path_2d_[i];
-    if (pix_2d(0) == -1) {
-      continue;
-    }
-    double new_depth = past_calibrator->WarpDepth(pix_2d(0), pix_2d(1), past_calibrator->GetDepth(i));
-    auto new_pix_2d = past_calibrator->Warp(pix_2d(0), pix_2d(1), past_calibrator->GetDepth(i));
-    for (int j = 0; j < path_2d_.size(); j++) {
-      if (path_2d_[j](0) == -1) {
+  else if (!has_iterated_) {
+    // TODO: Hard code here.
+    depth_.resize(path_2d_.size(), 2.3);
+    std::memcpy(cam_paras_, another_calibrator->cam_paras_, sizeof(double) * 7);
+  }
+  else {
+    std::vector<double> tmp_sum;
+    std::vector<double> new_depth;
+    // TODO: Hard code here.
+    new_depth.resize(path_2d_.size(), 2.3);
+    tmp_sum.resize(path_2d_.size(), 0.0);
+    for (int i = 0; i < another_calibrator->path_2d_.size(); i++) {
+      auto pix_2d = another_calibrator->path_2d_[i];
+      if (pix_2d(0) == -1) {
         continue;
       }
-      // TODO: Hard code here.
-      double distance = (Eigen::Vector2d(path_2d_[j](0), path_2d_[j](1)) - new_pix_2d).norm();
-      if (distance > 5.0) {
-        continue;
-      }
-      double c = std::exp(-distance);
-      tmp_sum[j] += c;
-      depth_[j] += c * new_depth;
-    }
-  }
+      Eigen::Vector3d pt_world = another_calibrator->Pix2World(pix_2d(0), pix_2d(1), another_calibrator->GetDepth(i));
+      Eigen::Vector3d pt_cam = World2Cam(pt_world);
+      double new_depth = pt_cam(2); // z
+      double focal_length = another_calibrator->FocalLength();
+      Eigen::Vector2d new_pix_2d(
+        pt_cam(1) / (new_depth * focal_length) + height_ / 2,
+        pt_cam(0) / (new_depth * focal_length) + width_ / 2);
 
-  for (int j = 0; j < path_2d_.size(); j++) {
-    if (tmp_sum[j] < 1e-9) {
-      depth_[j] = 2.3;
+      for (int j = 0; j < path_2d_.size(); j++) {
+        if (path_2d_[j](0) == -1) {
+          continue;
+        }
+        double distance = (Eigen::Vector2d(path_2d_[j](0), path_2d_[j](1)) - new_pix_2d).norm();
+        // TODO: Hard code here.
+        if (distance > 5.0) {
+          continue;
+        }
+        double c = std::exp(-distance);
+        tmp_sum[j] += c;
+        new_depth[j] += c * new_depth;
+      }
     }
-    else {
-      depth_[j] /= tmp_sum[j];
+
+    // TODO: Hard code here.
+    double change_ratio = 1.0;
+    for (int j = 0; j < path_2d_.size(); j++) {
+      if (tmp_sum[j] > 1e-9) {
+        depth_[j] = depth_[j] * (1.0 - change_ratio) + new_depth[j] * change_ratio;
+      }
     }
   }
 }
 
-void Calibrator::Run() {
-  // Initialize Parameters.
-
-  int num_ex_paras_ = 0;
+void Calibrator::InitialSample() {
+  num_ex_paras_ = 0;
   past_sampled_.resize(path_2d_.size(), -1);
   next_sampled_.resize(path_2d_.size(), -1);
 
@@ -65,7 +92,6 @@ void Calibrator::Run() {
     if (path_2d_[i](0) == -1) {
       continue;
     }
-
     if (i == 0 || i == path_2d_.size() - 1 || path_2d_[i - 1](0) == -1 || path_2d_[i + 1](0) == -1) {
       past_sampled_[i] = next_sampled_[i] = i;
       sampled_.push_back(i);
@@ -89,8 +115,11 @@ void Calibrator::Run() {
       next_sampled_[i] = next_sampled_[i + 1];
     }
   }
+}
 
+void Calibrator::Run() {
   int num_valid_funcs = 0;
+
   for (const auto &pt : path_2d_) {
     if (pt(0) != -1) {
       num_valid_funcs++;
@@ -228,6 +257,7 @@ void Calibrator::Run() {
       break;
     };*/
   }
+  has_iterated_ = true;
 }
 
 void Calibrator::AddDeltaP(const Eigen::VectorXd &delta_p) {
@@ -260,7 +290,7 @@ double Calibrator::CalcCurrentError() {
     }
     idx++;
     auto warped = Warp(path_2d_[i](0), path_2d_[i](1), GetDepth(i));
-    current_error += dist_map_->Distance(warped(0), warped(1));
+    current_error += another_calibrator_->dist_map_->Distance(warped(0), warped(1));
   }
   current_error /= (double) idx;
   return current_error;
@@ -269,7 +299,7 @@ double Calibrator::CalcCurrentError() {
 void Calibrator::ShowCurrentSituation() {
   int idx = -1;
   cv::Mat img;
-  cv::cvtColor(img_gray_, img, cv::COLOR_GRAY2BGR);
+  cv::cvtColor(another_calibrator_->img_gray_, img, cv::COLOR_GRAY2BGR);
   for (int i = 0; i < path_2d_.size(); i++) {
     if (path_2d_[i](0) == -1) {
       continue;
@@ -290,16 +320,14 @@ void Calibrator::SaveCurrentPoints() {
     if (path_2d_[i](0) == -1) {
       continue;
     }
-    // TODO: Hard code here.
-    double focal_length = std::exp(cam_paras_[6]);
+    double focal_length = FocalLength();
     double z = GetDepth(i);
-    double x = (path_2d_[i](1) - dist_map_->width_ / 2.0) * focal_length * z;
-    double y = (path_2d_[i](0) - dist_map_->height_ / 2.0) * focal_length * z;
+    double x = (path_2d_[i](1) - width_ / 2.0) * focal_length * z;
+    double y = (path_2d_[i](0) - height_ / 2.0) * focal_length * z;
     points.emplace_back(z, x, y);
   }
   Utils::SavePointsAsPly("current.ply", points);
 }
-
 
 double Calibrator::GetDepth(int idx) {
   double depth;
@@ -317,19 +345,16 @@ double Calibrator::GetDepth(int idx) {
 }
 
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
-  double focal_length = std::exp(cam_paras_[6]);
+  double focal_length = FocalLength();
   // double focal_length = cam_paras_[6];
   // double focal_length = 1.0;
-
-  double x = (j - dist_map_->width_  / 2.0) * focal_length * depth;
-  double y = (i - dist_map_->height_ / 2.0) * focal_length * depth;
+  double *cam_paras = biased_cam_paras_;
+  double x = (j - width_  / 2.0) * focal_length * depth;
+  double y = (i - height_ / 2.0) * focal_length * depth;
   double z = depth;
-  // 0, 1, 2: translation.
-  double t_x = x + cam_paras_[0];
-  double t_y = y + cam_paras_[1];
-  double t_z = z + cam_paras_[2];
+
   // 3, 4, 5: rotation.
-  Eigen::Vector3d w(cam_paras_[3], cam_paras_[4], cam_paras_[5]);
+  Eigen::Vector3d w(cam_paras[3], cam_paras[4], cam_paras[5]);
   Eigen::Matrix3d t;
   if (w.norm() < 1e-6) {
     t.setIdentity();
@@ -337,7 +362,12 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
   else {
     t = Eigen::AngleAxisd(w.norm(), w / w.norm());
   }
-  auto r_coord = t * Eigen::Vector3d(t_x, t_y, t_z);
+  auto r_coord = t * Eigen::Vector3d(x, y, z);
+
+  // 0, 1, 2: translation.
+  double t_x = r_coord(0) + cam_paras[0];
+  double t_y = r_coord(1) + cam_paras[1];
+  double t_z = r_coord(2) + cam_paras[2];
 
   // std::cout << "z = " << r_coord(2) << std::endl;
   return Eigen::Vector2d(
@@ -346,19 +376,12 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
     );
 }
 
-double Calibrator::WarpDepth(int i, int j, double depth) {
-  // TODO: Redundant code here.
-  double focal_length = std::exp(cam_paras_[6]);
-  // double focal_length = cam_paras_[6];
-  // double focal_length = 1.0;
-
-  double x = (j - dist_map_->width_  / 2.0) * focal_length * depth;
-  double y = (i - dist_map_->height_ / 2.0) * focal_length * depth;
+Eigen::Vector3d Calibrator::Pix2World(int i, int j, double depth) {
+  double focal_length = FocalLength();
+  double x = (j - width_  / 2.0) * focal_length * depth;
+  double y = (i - height_ / 2.0) * focal_length * depth;
   double z = depth;
-  // 0, 1, 2: translation.
-  double t_x = x + cam_paras_[0];
-  double t_y = y + cam_paras_[1];
-  double t_z = z + cam_paras_[2];
+
   // 3, 4, 5: rotation.
   Eigen::Vector3d w(cam_paras_[3], cam_paras_[4], cam_paras_[5]);
   Eigen::Matrix3d t;
@@ -368,7 +391,32 @@ double Calibrator::WarpDepth(int i, int j, double depth) {
   else {
     t = Eigen::AngleAxisd(w.norm(), w / w.norm());
   }
-  auto r_coord = t * Eigen::Vector3d(t_x, t_y, t_z);
+  auto r_coord = t * Eigen::Vector3d(x, y, z);
 
-  return r_coord(2);
+  // 0, 1, 2: translation.
+  double t_x = r_coord(0) + cam_paras_[0];
+  double t_y = r_coord(1) + cam_paras_[1];
+  double t_z = r_coord(2) + cam_paras_[2];
+
+  return Eigen::Vector3d(t_x, t_y, t_z);
+}
+
+
+Eigen::Vector3d Calibrator::World2Cam(Eigen::Vector3d pt_world) {
+  Eigen::Vector3d pt_cam(pt_world);
+  pt_cam -= Eigen::Vector3d(cam_paras_[0], cam_paras_[1], cam_paras_[2]);
+
+  Eigen::Vector3d w(-cam_paras_[3], -cam_paras_[4], -cam_paras_[5]);
+  Eigen::Matrix3d t;
+  if (w.norm() < 1e-6) {
+    t.setIdentity();
+  }
+  else {
+    t = Eigen::AngleAxisd(w.norm(), w / w.norm());
+  }
+  return t * pt_cam;
+}
+
+double Calibrator::FocalLength() {
+  return std::exp(cam_paras_[6]);
 }

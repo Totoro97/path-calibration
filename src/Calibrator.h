@@ -22,7 +22,7 @@ public:
   void InitializeParameters(Calibrator *past_calibrator);
   void AddDeltaP(const Eigen::VectorXd &delta_p);
   double CalcCurrentError();
-  void Run();
+  void Run(int max_iter_num = (1 << 30));
   void ShowSampledPoints();
   void ShowCurrentSituation();
   void SaveCurrentPoints();
@@ -45,5 +45,5 @@ public:
   DistMap *dist_map_ = nullptr;
   // TODO: Hard code here.
   double cam_paras_[7] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.95 };
-  double biased_cam_paras_[7] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.95 };
+  // double biased_cam_paras_[7] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.95 };
 };

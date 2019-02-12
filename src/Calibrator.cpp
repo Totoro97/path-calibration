@@ -42,6 +42,8 @@ void Calibrator::InitializeParameters(Calibrator *another_calibrator) {
   else {
     std::vector<double> tmp_sum;
     std::vector<double> new_depth;
+
+    // depth
     // TODO: Hard code here.
     new_depth.resize(path_2d_.size(), 2.3);
     tmp_sum.resize(path_2d_.size(), 0.0);
@@ -117,7 +119,7 @@ void Calibrator::InitialSample() {
   }
 }
 
-void Calibrator::Run() {
+void Calibrator::Run(int max_iter_num) {
   int num_valid_funcs = 0;
 
   for (const auto &pt : path_2d_) {
@@ -130,8 +132,7 @@ void Calibrator::Run() {
   SaveCurrentPoints();
   ShowCurrentSituation();
   int iter_counter = 0;
-  while (true) {
-    iter_counter++;
+  while (iter_counter++ < max_iter_num) {
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_valid_funcs, 7 + num_ex_paras_);
     Eigen::VectorXd B = Eigen::VectorXd::Zero(num_valid_funcs);
     int idx = -1;
@@ -156,6 +157,7 @@ void Calibrator::Run() {
         if (p_idx == 0 || (iter_counter & 3) != 0) {
           continue;
         }
+        // TODO: Hard code here.
         if (iter_counter < 12)
           continue;
         if (next_sampled_[i] != p && past_sampled_[i] != p) {
@@ -344,6 +346,8 @@ double Calibrator::GetDepth(int idx) {
   return depth;
 }
 
+/*------------------- TODO: Fast Warp -------------------------------
+
 Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
   double focal_length = FocalLength();
   // double focal_length = cam_paras_[6];
@@ -374,6 +378,16 @@ Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
     r_coord(1) / (r_coord(2) * focal_length) + (double) dist_map_->height_ / 2,
     r_coord(0) / (r_coord(2) * focal_length) + (double) dist_map_->width_ / 2
     );
+}
+*/
+
+Eigen::Vector2d Calibrator::Warp(int i, int j, double depth) {
+  double focal_length = FocalLength();
+  Eigen::Vector3d pt_world = Pix2World(i, j, depth);
+  Eigen::Vector3d pt_cam = another_calibrator_->World2Cam(pt_world);
+  return Eigen::Vector2d(
+    pt_cam(1) / (pt_cam(2) * focal_length) + (double) height_ / 2,
+    pt_cam(0) / (pt_cam(2) * focal_length) + (double) width_ / 2);
 }
 
 Eigen::Vector3d Calibrator::Pix2World(int i, int j, double depth) {
